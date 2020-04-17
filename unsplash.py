@@ -18,10 +18,14 @@ headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 def parse_query(element):
     # 解析query
     odict = OrderedDict()
+    # srcset 属性记录着图片的链接，形如'url1 1x, url2 2x'
     link = element.xpath('@srcset')[0].split(',')[0].strip()[:-3]
+    # 获取url1后，将query字段读出值有序字典
+    # 所有element中只有query部分不一样，更改query值会产生不同变化
     base, queries = urllib.parse.splitquery(link)
     for query in queries.split('&'):
         k, v = query.split('=')
+        # 忽略高度的设置，则unsplash会自适应
         if k != 'h':
             odict[k] = v
     return base, odict
@@ -29,17 +33,21 @@ def parse_query(element):
 
 def download(element, dst, width, dpr):
     base, odict = parse_query(element)
+    # 第一个element往往记录着图片的最大宽度
     if int(odict['w']) >= width:
         odict['w'] = f'{width}'
     odict['dpr'] = f'{dpr}'
+    # 得到自定义的图片链接
     download_url = base + '?' + '&'.join(f'{k}={v}' for k, v in odict.items())
 
     # 开始下载
     print('start downloading image from unsplash.')
     # print(download_url)
     with closing(requests.get(download_url, headers=headers, stream=True)) as resp:
+        # 分段下载
         chunk_size = 1024
         content_size = int(resp.headers['content-length'])
+        # unsplash的图片一般为.jpg格式
         with open(dst + str(hex(id(resp))) + '.jpg', 'wb') as file:
             for data in tqdm(resp.iter_content(chunk_size=chunk_size), total=round(content_size//chunk_size)):
                 file.write(data)
@@ -50,6 +58,7 @@ def parse_unsplash(dst, width, dpr):
 
     html = etree.HTML(response.content)
     # 获取 Photos of the Day 封面图片
+    # 寻找图片的链接，这些链接藏得很深
     route = html.xpath('//div[@data-test="editorial-route"]')[0]
     div1 = route.xpath('div')[0]
     div2 = div1.xpath('div')[0]
@@ -79,6 +88,8 @@ if __name__ == '__main__':
     dst = args.dst
     dpr = int(args.dpr)
     width = int(args.width)
+    # dpr只能为1或2
     assert dpr in (1, 2)
+    # 宽度最低为50px，最高则为unsplash规定
     assert width >= 50
     parse_unsplash(dst, width, dpr)
