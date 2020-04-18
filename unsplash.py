@@ -49,15 +49,14 @@ def download(element, dst, width, dpr):
         content_size = int(resp.headers['content-length'])
         # unsplash的图片一般为.jpg格式
         with open(dst + str(hex(id(resp))) + '.jpg', 'wb') as file:
-            for data in tqdm(resp.iter_content(chunk_size=chunk_size), total=round(content_size//chunk_size)):
+            for data in tqdm(resp.iter_content(chunk_size=chunk_size), total=round(content_size/chunk_size)):
                 file.write(data)
 
 
 def parse_unsplash(dst, width, dpr):
-    response = requests.get(URL, headers=headers)
-
-    html = etree.HTML(response.content)
     # 获取 Photos of the Day 封面图片
+    response = requests.get(URL, headers=headers)
+    html = etree.HTML(response.content)
     # 寻找图片的链接，这些链接藏得很深
     route = html.xpath('//div[@data-test="editorial-route"]')[0]
     div1 = route.xpath('div')[0]
@@ -66,7 +65,7 @@ def parse_unsplash(dst, width, dpr):
     pics = div3.xpath('picture')[0]
     sources = pics.xpath('source')
     download(sources[0], dst, width, dpr)
-    print('done!')
+    print('Ok!')
 
 
 def parse_args():
