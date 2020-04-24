@@ -1,3 +1,6 @@
 lxml==4.3.3
 requests==2.21.0
 tqdm==4.45.0
+selenium==3.141.0
+PyQt5
+BeautifulSoup

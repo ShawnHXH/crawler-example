@@ -6,7 +6,7 @@ Some interesting python crawler example.
 `pip install -r requirements`
 2. 确保稳定的网络连接
 
-### 获取Unsplash上每日推荐的图片🏞
+### Unsplash每日推荐美图🏞
 - 名称: `unsplash.py`
 - 用法: `python unsplash.py`
 - 参数: 
@@ -17,7 +17,7 @@ Some interesting python crawler example.
 ```
 - 注意: 有时因为网络问题，会发生连接中断或长时间未响应
 
-### 获取美团美食的店铺信息🍱
+### 美团美食的店铺信息🍱
 - 名称: `meituan.py`
 - 用法: `python meituan.py`
 - 参数:
@@ -37,16 +37,11 @@ name(店铺名称), avgScore(平均评分), avgPrice(平均消费), address(店�
 ![meituan](./img/meituan.png)
 
 ### 知轩藏书查询下载📚
-- 名称: `xiaoshuo.py`,`xiaoshuoGUI.py`
+- 名称: `xiaoshuoGUI.py`
 - 用法: `python xiaoshuoGUI.py`
-- 参数:
+- 注意:
 ```
-None
-```
-- 注意:需要安装PyQt5
-```
-下载方式为呼出默认浏览器,进而呼出默认下载工具下载,使用python传输会导致下载失败.
-练手之作,存在部分BUG.
+下载方式为呼出默认浏览器, 进而呼出默认下载工具下载, 使用python传输会导致下载失败。
 ```
 - 效果:
 ![xiaoshuo](./img/xiaoshuo.png)
