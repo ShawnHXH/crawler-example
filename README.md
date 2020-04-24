@@ -35,3 +35,18 @@ name(店铺名称), avgScore(平均评分), avgPrice(平均消费), address(店�
 ```
 - 效果:
 ![meituan](./img/meituan.png)
+
+### 知轩藏书查询下载📚
+- 名称: `xiaoshuo.py`,`xiaoshuoGUI.py`
+- 用法: `python xiaoshuoGUI.py`
+- 参数:
+```
+None
+```
+- 注意:需要安装PyQt5
+```
+下载方式为呼出默认浏览器,进而呼出默认下载工具下载,使用python传输会导致下载失败.
+练手之作,存在部分BUG.
+```
+- 效果:
+![xiaoshuo](./img/xiaoshuo.png)
