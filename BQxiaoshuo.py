@@ -113,7 +113,7 @@ def main(url,ci):
         elif huozhe == 1:
             print("正在下载")
 
-yanshi = 0
+yanshi = 0  #延时
 main("https://www.biqugg.com/xs/1/",5)
 
 #   注释
