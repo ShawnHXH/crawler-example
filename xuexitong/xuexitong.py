@@ -61,11 +61,12 @@ class XueXiTong:
                 cur_page = 1
             print('当前页面:', cur_title, cur_page)
             # 寻找学习任务
-            if self.play_video():
-                cur_count += 1
-            self.next_page()
+            cur_count += (1 if self.traverse() else 0)
+            if not self.next_page():
+                print('课程全部结束!')
+                break
             if limit != -1 and cur_count == limit:
-                print('任务结束!')
+                print('此次任务结束!')
                 break
             time.sleep(1.5)
 
@@ -89,30 +90,34 @@ class XueXiTong:
         timeline = self.wait.until(ec.presence_of_element_located((By.CLASS_NAME, 'timeline')))
         # 由icon元素确定该节是否学习
         lessons = timeline.find_elements_by_class_name('icon')
-        # 找到第一节未学习的课程, 已做选择优化
+        # 找到一节未学习的课程, 已做选择优化
         enter_point = None
+        enter_point_url = None
         distance = 0
+        threshold = 3
         for lesson in lessons:
             tag = lesson.find_element_by_tag_name('em').get_attribute('class')
             if tag == 'orange':
-                if enter_point is None:
+                if enter_point is None or distance > threshold:
                     enter_point = lesson
+                    distance = 0
                 else:
-                    if distance > 5:
-                        enter_point = lesson
-                        distance = 0
-                    else:
-                        root = enter_point.find_element_by_xpath('.//..')  # 章节根节点
-                        link = root.find_element_by_css_selector('.articlename > a')  # 章节链接
-                        cnum = root.find_element_by_class_name('chapterNumber')  # 章节数
-                        print('未完成章节定位成功:', cnum.text, link.get_attribute('title'))
-                        self.browser.get(link.get_attribute('href'))
-                        break
+                    root = enter_point.find_element_by_xpath('.//..')  # 章节根节点
+                    link = root.find_element_by_css_selector('.articlename > a')  # 章节链接
+                    cnum = root.find_element_by_class_name('chapterNumber')  # 章节数
+                    print('未完成章节定位成功:', cnum.text, link.get_attribute('title'))
+                    enter_point_url = link.get_attribute('href')
+                    break
             else:
                 distance += 1
+        if enter_point_url is not None:
+            self.browser.get(enter_point_url)
+        else:
+            print('没有待完成课程, 即将结束任务...')
+            exit(-1)
 
-    def next_page(self):
-        """ 切换到下一页 """
+    def next_page(self) -> bool:
+        """ 切换到下一页, 返回是否有下一页 """
         # 定位'下一页'按钮
         next_buttons = self.browser.find_elements_by_css_selector('#mainid.main > .tabtags > .orientationright')
         if len(next_buttons) == 1:
@@ -121,53 +126,59 @@ class XueXiTong:
         else:
             # 页面拥有许多'下一页'按钮时, 但只有 style="display: block" 的才显示.
             next_button = list(filter(lambda btn: 'display: block' in btn.get_attribute('style'), next_buttons))[0]
+        # 判断是否为最后一个按钮
+        if 'gray' in next_button.get_attribute('class'):
+            return False
         # 此按钮没有链接, 而是直接为JS代码(onclick).
         self.browser.execute_script(next_button.get_attribute('onclick'))
         # 等待元素更新
         self.browser.implicitly_wait(1.0)
+        return True
 
     def find_title(self):
         """ 寻找当前页面的标题 """
         title = self.browser.find_element_by_css_selector('#mainid.main > h1')
         return title.text
 
-    def play_video(self) -> bool:
-        """ 遍历学习任务结点, 返回是否播放完成 """
-        status = False
+    def traverse(self) -> bool:
+        """ 遍历学习任务结点, 返回是否学习完成 """
+        status = True
         # 每一个页面都拥有一个iframe元素
         self.browser.switch_to.frame('iframe')
         self.wait.until(ec.presence_of_element_located((By.CSS_SELECTOR, 'div.ans-cc')))
         try:
             # 寻找未完成的任务结点
             nodes = self.browser.find_elements_by_xpath('//div[@class="ans-attach-ct"]')
-            print('[*] 此页面找到', len(nodes), '个未完成任务结点')
             for i, node in enumerate(nodes, start=1):
                 # 拥有此class的iframe元素表示视频
                 frame = node.find_element_by_css_selector('iframe.ans-attach-online.ans-insertvideo-online')
-                self.browser.switch_to.frame(frame)
-                print('[*] 准备播放第', i, '个视频')
-                video = self.browser.find_element_by_id('video')
-                video.click()
-                # 等待视频加载完全后, 重新获取元素
-                self.wait.until(lambda web: web.find_element_by_class_name('vjs-duration-display').text != '0:00')
-                video = self.browser.find_element_by_id('video')
-                # 设置播放选项, 得到剩余播放时间
-                rest = self.play_settings(video, max_speed=True)
-                print('[*] 播放预计在', rest, 's 后完成...')
-                time.sleep(rest)
-                print('[*] 播放完成, 3s后自动切换...')
-                # 退出当前iframe
-                self.browser.switch_to.parent_frame()
-                time.sleep(3.0)
-                status = True
+                self.play_video(frame, i)
         except NoSuchElementException:
-            pass
+            status = False
         finally:
             # 退出到最外层页面
             self.browser.switch_to.default_content()
             return status
 
-    def play_settings(self, video, max_speed: bool = True):
+    def play_video(self, video_frame, video_id):
+        """ 播放视频型学习任务结点 """
+        self.browser.switch_to.frame(video_frame)
+        print('[*] 准备播放第', video_id, '个视频')
+        video = self.browser.find_element_by_id('video')
+        video.click()
+        # 等待视频加载完全后, 重新获取元素
+        self.wait.until(lambda web: web.find_element_by_class_name('vjs-duration-display').text != '0:00')
+        video = self.browser.find_element_by_id('video')
+        # 设置播放选项, 得到剩余播放时间
+        rest = self.play_video_settings(video, max_speed=True)
+        print('[*] 播放预计在', rest, 's 后完成...')
+        time.sleep(rest)
+        # 退出当前iframe
+        self.browser.switch_to.parent_frame()
+        print('[*] 播放完成, 3s后自动切换...')
+        time.sleep(3.0)
+
+    def play_video_settings(self, video, max_speed: bool = True):
         """ 设置播放视频选项, 返回视频播放的剩余时间 """
         speed = 1.0  # 默认视频倍速
         if max_speed:
@@ -183,7 +194,7 @@ class XueXiTong:
         all_time = video.find_element_by_class_name('vjs-duration-display').text
         cur_time = video.find_element_by_class_name('vjs-current-time-display').text
         res_time = self.time_to_seconds(all_time) - self.time_to_seconds(cur_time)
-        return math.ceil(res_time / speed) + 1.0
+        return math.ceil(res_time / speed)
 
     @classmethod
     def time_to_seconds(cls, time_str: str) -> float:
