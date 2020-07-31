@@ -1,0 +1,6 @@
+requests
+lxml
+tqdm
+selenium
+PyQt5
+BeautifulSoup
